@@ -1,56 +1,142 @@
 # **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
 
-Overview
+<center>
+    <img src="./test_images_output/solidWhiteCurve.jpg" width="50%" height="50%" />
+</center>
+
+
 ---
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+## Finding Lane Lines on the Road
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
+The goals / steps of this project are the following:
+* Make a pipeline that finds lane lines on the road using images from [./test_images](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P1-FindingLaneLines/tree/development/test_images)
+* Generate the result of drawing the lane lines on the images to [./test_images_output](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P1-FindingLaneLines/tree/development/test_images_output)
+* **Additionally**, i have added multiple images that helps me during the development to [./test_images_debugging](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P1-FindingLaneLines/tree/development/test_images_debugging)
+* Apply the developed pipeline to two vedios from [./test_videos](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P1-FindingLaneLines/tree/development/test_videos), and generate result to [./test_videos_output](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P1-FindingLaneLines/tree/development/test_videos_output)
+* Reflect of the done work in a written report.
 
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
-
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
-
-
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
-
-1. Describe the pipeline
-
-2. Identify any shortcomings
-
-3. Suggest possible improvements
-
-We encourage using images in your writeup to demonstrate how your pipeline works.  
-
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
-
-
-The Project
 ---
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
+## Reflection
 
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) if you haven't already.
+- lets start from this figure and go through each cell with description. 
+<center>
+    <img src="./test_images_debugging/solidYellowCurve2.jpg" width="100%" height="100%" />
+</center>
 
-**Step 2:** Open the code in a Jupyter Notebook
 
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out [Udacity's free course on Anaconda and Jupyter Notebooks](https://classroom.udacity.com/courses/ud1111) to get started.
+## 1. The pipeline description:
+### **The pipeline consisted of 5 steps** 
 
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
+1. Converting the original image to grayscal as seen in upper-middel image.
+    * ```python 
+      # Switching to gray scale
+      gray_image = grayscale(current_image)
+      ```
+2. Smoothing the grayscaled image with tha aid of gaussian filter as seen in the upper-right image.
+    * ```python
+      # Apply Gaussian smoothing
+      smoothing_kernal_size = 5
+      smoothed_image = gaussian_blur(gray_image, smoothing_kernal_size)
+      ```
+3. Using Canny transformation in order to detect all the edges in the image as seen in the middle-left image
+    * ```python
+      # Apply Canny Transform to get the edges in the image
+      low_threshold = 50
+      high_threshold= 150
+      edges_image = canny(smoothed_image, low_threshold, high_threshold)
+      ```
+4. Using the HOUGH to determine only the lines/area of interest as seen in both middle-middle image (area of interest), and in the middle-right image after applying the mask.
+    * ```python
+      # Selecting the area of interest
+        imshape = edges_image.shape
+        xsize, ysize = imshape[1], imshape[0]                   # Get the image size
+        vertices = np.array([[  (0.01*xsize,    ysize),         # Lower - Left
+                                (0.45*xsize,    ysize*0.64),    # Upper - Left
+                                (0.55*xsize,    ysize*0.64),    # Upper - Right
+                                (0.99*xsize,    ysize)          # Lower - Right
+                            ]], dtype=np.int32)
+        
+        masked_edges_image, area_of_interest = region_of_interest(edges_image, vertices)
 
-`> jupyter notebook`
+        # Apply Hough on edge detected image
+        ρ, Θ = 3, np.pi/180
+        threshold = 100
+        min_line_len = 25
+        max_line_gap = 25
+        hough_lines_image = hough_lines(masked_edges_image, 
+                                        ρ, 
+                                        Θ, 
+                                        threshold, 
+                                        min_line_len, 
+                                        max_line_gap)
+      ```
+5. Drawing the Lane Lines on the Original Image
+    * ```python
+      # combined result
+      combined_image = weighted_img(hough_lines_image, current_image)
+      ```
 
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
+* **draw_lines function modifications:**
+    * ```python 
+      def draw_lines(image, lines, color=[255, 0, 0], thickness=10):
+        
+          # Reshape the lines into a line based matrix
+          lines = lines.reshape(lines.shape[0], lines.shape[2])
+        
+          # Select all right lane lines
+          right_lines = list(filter(lambda x: get_line_slope(x) > 0, lines))
+          # Reconstruct the lines in a list of lists format
+          right_lines = list(map(list,right_lines))
+        
+          # Select all left lane lines
+          left_lines = list(filter(lambda x: get_line_slope(x) < 0, lines))
+          # Reconstruct the lines in a list of lists format
+          left_lines = list(map(list,left_lines))
+        
+          # using the weighted average to draw avg line
+          draw_avg_line(image, right_lines, color, thickness)
+          draw_avg_line(image, left_lines , color, thickness)
+        
+          return
 
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
+      def get_line_slope(line):
+          # (Y2 - Y1) / (X2 - X1)
+          return (line[3] - line[1])/(line[2] - line[0])
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+      def draw_avg_line(image, lines, color, thickness, ):
+          # using the weighted average
+          avg_line =  np.average(lines, axis=0)
+        
+          if np.isnan(avg_line).any():
+              # No line detected.
+              return
+            
+          # extent short lines to the bounderies of AoI
+          coefficients = np.polyfit((avg_line[0], avg_line[2]), (avg_line[1], avg_line[3]), 1)
+          m, b = coefficients[0], coefficients[1]
 
+          y1 = image.shape[0] # Max value on Y-axis
+          x1 = (y1 - b)/m     # From the line equation Y = mX + b
+
+          y2 = y1*0.64        # match the value with area of interest
+          x2 = (y2 - b)/m     # From the line equation Y = mX + b
+
+          cv2.line(image, (int(x1), int(y1)), (int(x2), int(y2)), color, thickness)
+          return
+      ```
+
+## 2. Identify potential shortcomings with your current pipeline
+
+*  One potential shortcoming would be the pipeline could draw some strange lane lines when there are some shadows of trees or others in the test images.
+
+*  Another shortcomming would be the urge to use curve instad of line draw.
+
+
+## 3. Suggest possible improvements to your pipeline
+
+* A possible improvement would be to use advanced OpenCV techniques, such as Sobel operator, HLS or HSV color spaces and so on. Which normally can solve the challenge part easily.
+
+* Another potential improvement could be to use Convolutional Neural Network or other Deep Learning methods to create a semantic segmentation solution for detecting lane lines.
