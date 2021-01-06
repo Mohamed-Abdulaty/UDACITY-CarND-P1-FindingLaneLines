@@ -53,11 +53,14 @@ The goals / steps of this project are the following:
       # Selecting the area of interest
         imshape = edges_image.shape
         xsize, ysize = imshape[1], imshape[0]                   # Get the image size
-        vertices = np.array([[  (0.01*xsize,    ysize),         # Lower - Left
-                                (0.45*xsize,    ysize*0.64),    # Upper - Left
-                                (0.55*xsize,    ysize*0.64),    # Upper - Right
-                                (0.99*xsize,    ysize)          # Lower - Right
-                            ]], dtype=np.int32)
+        vertices = np.array([[  (0.05*xsize,    ysize),         # P1
+                                (0.45*xsize,    ysize*0.60),    # P2
+                                (0.55*xsize,    ysize*0.60),    # P3
+                                (0.95*xsize,    ysize),         # P4
+                                (0.80*xsize,    ysize),         # P5 
+                                (0.50*xsize,    ysize*0.70),    # P6
+                                (0.20*xsize,    ysize)          # P7
+                        ]], dtype=np.int32)
         
         masked_edges_image, area_of_interest = region_of_interest(edges_image, vertices)
 
@@ -88,11 +91,17 @@ The goals / steps of this project are the following:
         
           # Select all right lane lines
           right_lines = list(filter(lambda x: get_line_slope(x) > 0, lines))
+          ## Set restriction on the slope range
+          right_lines = list(filter(lambda x: get_line_slope(x) > 0.2, right_lines))
+          right_lines = list(filter(lambda x: get_line_slope(x) < 0.8, right_lines))
           # Reconstruct the lines in a list of lists format
           right_lines = list(map(list,right_lines))
         
           # Select all left lane lines
           left_lines = list(filter(lambda x: get_line_slope(x) < 0, lines))
+          ## Set restriction on the slope range
+          left_lines = list(filter(lambda x: get_line_slope(x) > -0.8, left_lines))
+          left_lines = list(filter(lambda x: get_line_slope(x) < -0.2, left_lines))
           # Reconstruct the lines in a list of lists format
           left_lines = list(map(list,left_lines))
         
